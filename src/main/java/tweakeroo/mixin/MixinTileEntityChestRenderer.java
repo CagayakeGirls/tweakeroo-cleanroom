@@ -13,7 +13,7 @@ public abstract class MixinTileEntityChestRenderer extends
 {
     @Shadow private boolean isChristmas;
 
-    @Redirect(method = "render", require = 0, at = @At(value = "FIELD",
+    @Redirect(method = "render(Lnet/minecraft/tileentity/TileEntityChest;DDDFIF)V", require = 0, at = @At(value = "FIELD",
               target = "Lnet/minecraft/client/renderer/tileentity/TileEntityChestRenderer;isChristmas:Z"))
     private boolean disableChristmasTexture(net.minecraft.client.renderer.tileentity.TileEntityChestRenderer renderer)
     {

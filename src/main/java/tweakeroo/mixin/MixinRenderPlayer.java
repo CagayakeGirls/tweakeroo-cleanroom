@@ -13,7 +13,7 @@ import tweakeroo.config.FeatureToggle;
 @Mixin(RenderPlayer.class)
 public abstract class MixinRenderPlayer
 {
-    @Redirect(method = "doRender", require = 0, at = @At(
+    @Redirect(method = "doRender(Lnet/minecraft/client/entity/AbstractClientPlayer;DDDFF)V", require = 0, at = @At(
                 value = "INVOKE",
                 target = "Lnet/minecraft/client/entity/AbstractClientPlayer;isUser()Z"))
     private boolean overrideIsUser(AbstractClientPlayer entity)
