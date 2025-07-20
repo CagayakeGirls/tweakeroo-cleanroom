@@ -7,6 +7,7 @@ import org.apache.logging.log4j.Logger;
 
 import malilib.registry.Registry;
 
+@Mod(modid = Reference.MOD_ID, name = Reference.MOD_NAME, version = Reference.MOD_VERSION, guiFactory = "tweakeroo.compat.forge.TweakerooGuiFactory")
 public class Tweakeroo
 {
     public static final Logger LOGGER = LogManager.getLogger(Reference.MOD_ID);
