@@ -1,0 +1,11 @@
+[{
+	"modid": "tweakeroo",
+	"name": "Tweakeroom",
+	"version": "${mod_version}",
+	"mcversion": "1.12.2",
+	"description": "Tweakeroo unofficial Cleanroom port. Adds various configurable client-side tweaks.",
+	"authorList": ["RawDiamondMC", "CagayakeGirls"],
+	"credits": "masa",
+	"url": "https://github.com/CagayakeGirls/tweakeroo-cleanroom",
+	"logoFile": "assets/tweakeroo/icon.png"
+}]
