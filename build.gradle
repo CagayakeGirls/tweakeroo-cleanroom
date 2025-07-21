@@ -1,10 +1,12 @@
+import org.jetbrains.gradle.ext.Gradle
+
 plugins {
-	id 'xyz.wagyourtail.unimined' version '1.4.1'
+    id 'java'
+    id 'java-library'
+    id 'org.jetbrains.gradle.plugin.idea-ext' version '1.1.9'
+    id 'com.gtnewhorizons.retrofuturagradle' version '1.4.1'
 	id 'maven-publish'
 }
-
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
 
 group = project.mod_id // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 version = project.mod_version
@@ -26,66 +28,45 @@ repositories {
 	// maven { url 'https://maven.terraformersmc.com/releases/' }
 
 	maven { url 'https://masa.dy.fi/maven' }
-	maven {
-        name 'CleanroomMC Maven'
-        url 'https://maven.cleanroommc.com'
+    maven {
+        name = 'CleanroomMC Maven'
+        url = 'https://maven.cleanroommc.com'
     }
-}
-
-unimined.minecraft {
-    version project.minecraft_version
-
-    mappings {
-        mcp("stable", "39-1.12")
+    maven {
+        name = "GTNH Maven"
+        url = uri("https://nexus.gtnewhorizons.com/repository/public/")
     }
-
-    cleanroom {
-        loader "0.3.10-alpha"
-        runs.auth.username = "Dev"
-    }
+    mavenLocal()
 }
 
-def referencePath = 'src/main/java/tweakeroo/Reference.java'
+minecraft {
+    mcVersion.set('1.12.2')
 
-tasks.register('injectTag') {
-	def tempFile = layout.buildDirectory.file("generated/Reference.java")
-	doLast {
-		def file = project.file(referencePath)
-		if (file.exists()) {
-			def content = file.text
-			tempFile.get().asFile.text = file.text
-			file.write(content.replace('@MOD_VERSION@', project.version), 'UTF-8')
+    mcpMappingChannel.set('stable')
+    mcpMappingVersion.set('39')
 
-			logger.lifecycle("Modified " + referencePath)
-		} else {
-			throw new GradleException("Reference not found")
-		}
-	}
-}
+    username.set("Dev")
 
-tasks.register('restore') {
-	dependsOn compileJava
-	doLast {
-		def file = project.file(referencePath)
-		file.write(layout.buildDirectory.file("generated/Reference.java").get().asFile.text, 'UTF-8')
-	}
-}
+    extraRunJvmArguments.addAll(['-ea:' + group, '-Dfml.coreMods.load=malilib.compat.forge.MaLiLibLoadingPlugin' , '-Dfml.coreMods.load=tweakeroo.compat.forge.TweakerooLoadingPlugin','-Dmixin.hotSwap=true', '-Dmixin.checks.interfaces=true', '-Dmixin.debug.export=true'])
 
-tasks.named('compileJava') {
-	dependsOn("injectTag")
-}
-
-tasks.named('build') {
-	dependsOn("restore")
+    injectedTags.put("@MOD_VERSION@", project.version)
+    tagReplacementFiles.add("Reference.java")
 }
 
 dependencies {
-	implementation "com.google.code.findbugs:jsr305:3.0.2"
-	compileOnly "com.cleanroommc:sponge-mixin:0.20.10+mixin.0.8.7"
-	//modImplementation("malilib:malilib-ornithe-${project.minecraft_version_out}:${project.malilib_version}") {
-	//	transitive = false
-	//}
-	modImplementation files("./malilib-cleanroom-1.12.2-0.60.2.jar")
+    runtimeOnly 'com.cleanroommc:strip-latest-forge-requirements:1.0'
+    runtimeOnly 'com.cleanroommc:osxnarratorblocker:1.0'
+    annotationProcessor 'org.ow2.asm:asm-debug-all:5.2'
+    annotationProcessor 'com.google.guava:guava:32.1.2-jre'
+    annotationProcessor 'com.google.code.gson:gson:2.8.9'
+    String mixinBooter = modUtils.enableMixins('zone.rong:mixinbooter:10.6', 'mixins.tweakeroo.refmap.json')
+    api (mixinBooter) {
+        transitive = false
+    }
+    annotationProcessor (mixinBooter) {
+        transitive = false
+    }
+	implementation("malilib:malilib-cleanroom-${project.minecraft_version_out}:${project.malilib_version}")
 }
 
 processResources {
@@ -109,13 +90,12 @@ tasks.withType(JavaCompile).configureEach {
 	// see http://yodaconditions.net/blog/fix-for-java-file-encoding-problems-with-gradle.html
 	// If Javadoc is generated, this must be specified in that task too.
 	it.options.encoding = "UTF-8"
-
-	if (JavaVersion.current().isJava9Compatible()) {
-		it.options.release = 8
-	}
 }
 
 java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(8))
+    }
 	// Still required by IDEs such as Eclipse and Visual Studio Code
 	sourceCompatibility = JavaVersion.VERSION_1_8
 	targetCompatibility = JavaVersion.VERSION_1_8
@@ -130,13 +110,63 @@ java {
 }
 
 // If you plan to use a different file for the license, don't forget to change the file name here!
-/*
 jar {
-	from('LICENSE') {
-		rename { "${it}_${base.archivesName.get()}" }
-	}
+    manifest {
+        def currentTasks = gradle.startParameter.taskNames
+        def attribute_map = [:]
+        attribute_map['FMLCorePlugin'] = 'tweakeroo.compat.forge.TweakerooLoadingPlugin'
+        attribute_map['FMLCorePluginContainsFMLMod'] = true
+        attribute_map['ForceLoadAsMod'] = currentTasks[0] == 'build' || currentTasks[0] == 'prepareObfModsFolder' || currentTasks[0] == 'runObfClient'
+        attributes(attribute_map)
+    }
 }
-*/
+
+idea {
+    module {
+        inheritOutputDirs = true
+    }
+    project {
+        settings {
+            runConfigurations {
+                "1. Run Client"(Gradle) {
+                    taskNames = ["runClient"]
+                }
+                "2. Run Server"(Gradle) {
+                    taskNames = ["runServer"]
+                }
+                "3. Run Obfuscated Client"(Gradle) {
+                    taskNames = ["runObfClient"]
+                }
+                "4. Run Obfuscated Server"(Gradle) {
+                    taskNames = ["runObfServer"]
+                }
+            }
+            compiler.javac {
+                afterEvaluate {
+                    javacAdditionalOptions = "-encoding utf8"
+                    moduleJavacAdditionalOptions = [
+                            (project.name + ".main"): tasks.compileJava.options.compilerArgs.collect { '"' + it + '"' }.join(' ')
+                    ]
+                }
+            }
+        }
+    }
+}
+
+tasks.named('prepareObfModsFolder').configure {
+    finalizedBy 'prioritizeCoremods'
+}
+
+tasks.register('prioritizeCoremods') {
+    dependsOn 'prepareObfModsFolder'
+    doLast {
+        fileTree('run/obfuscated').forEach {
+            if (it.isFile() && it.name =~ '(mixinbooter|configanytime)(-)([0-9])+\\.+([0-9])+(.jar)') {
+                it.renameTo(new File(it.parentFile, "!${it.name}"))
+            }
+        }
+    }
+}
 
 // Configure the maven publication
 tasks.publish.dependsOn build
@@ -144,17 +174,11 @@ tasks.publish.dependsOn build
 publishing {
 	publications {
 		mavenJava(MavenPublication) {
-			artifactId project.archivesBaseName
+			artifactId = project.mod_file_name + '-' + project.minecraft_version_out
 
 			// add all the jars that should be included when publishing to maven
 			//artifact(jar) { builtBy remapJar }
 			from components.java
-		}
-	}
-
-	repositories {
-		maven {
-			url "$projectDir/../../CommonMaven"
 		}
 	}
 }
